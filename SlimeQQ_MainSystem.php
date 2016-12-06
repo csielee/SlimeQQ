@@ -10,7 +10,7 @@
     	storageBucket: "slimeqq-database.appspot.com",
     	messagingSenderId: "514777325203"
   	};
-  firebase.initializeApp(config);
+    firebase.initializeApp(config);
 	</script>
 </head>>
 <body>
