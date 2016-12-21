@@ -1,5 +1,7 @@
+<!DOCTYPE html>
+<html>
 <head>
-	
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 	<script src="https://www.gstatic.com/firebasejs/3.6.2/firebase.js"></script>
 	<script>
   	// Initialize Firebase
@@ -12,7 +14,26 @@
   	};
   firebase.initializeApp(config);
 	</script>
-</head>>
+  <script src="phaser.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.0.0/jquery.js"></script>
+  <style type="text/css">
+    #game {
+      position: absolute;
+      top: 0px;
+      left: 0px;
+      width: 100%;
+      height: 100%;
+      text-align: middle;
+    }
+    #game canvas{
+      margin: auto auto;
+    }
+  </style>
+</head>
 <body>
-	hi everyone!
+  
+  <div id="game"></div>
+  
+  <script charset="UTF-8" language="javascript" type="text/javascript" src="SlimeQQ_game.js"></script>
 </body>
+</html>
