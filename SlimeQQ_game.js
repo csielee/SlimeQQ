@@ -1,5 +1,5 @@
 var game = new Phaser.Game( 1000 , 600 ,Phaser.AUTO,'game'); //產生game物件
-game.States = {}; //存放state?象
+game.States = {}; //存放state對象
 
 var res_path = '.';
 
@@ -29,6 +29,10 @@ game.States.preload = function(){
 		game.load.image('background',res_path + '/img/SlimeQQ_background.png'); //背景
     	game.load.image('title',res_path + '/img/SlimeQQ_title.png'); //遊戲標題
 		game.load.image('gameStart_btn',res_path + '/img/SlimeQQ_gameStart.png'); //開始按鈕
+    	game.load.tilemap('map1',res_path + '/map/map1.json',null,Phaser.Tilemap.TILED_JSON);
+    	game.load.image('map1_tile',res_path + '/res/ground1.png');
+    	game.load.image('slime',res_path + '/res/slime.png');
+    	//game.load.atlas();
     	/*
     	game.load.image('ground','assets/ground.png'); //地面
     	game.load.image('title','assets/title.png'); //游???
@@ -69,10 +73,74 @@ game.States.start_menu = function(){
 		game.add.tween(titleGroup).to({ y:game.height/2-(titleGroup.height*3)/4 },3000,null,true,0,Number.MAX_VALUE,true); //標題的緩動動畫
 		var btn = game.add.button(game.width/2,game.height/2 + titleGroup.height,'gameStart_btn',function(){//?始按?
 			alert('還沒寫好啦!');
-		//	game.state.start('play');
+			game.state.start('play');
 		});
 		btn.anchor.setTo(0.5,0.5);
 	}
+}
+
+game.States.play = function(){
+	this.preload = function(){
+		game.physics.startSystem(Phaser.Physics.ARCADE);
+	}
+	this.create = function(){
+		
+
+		game.map = game.add.tilemap('map1');
+		game.map.addTilesetImage('ground1','map1_tile');
+
+		this.backgroundlayer = game.map.createLayer('BackgroundLayer');
+		this.groundlayer = game.map.createLayer('GroundLayer');
+		game.map.setCollisionBetween(1,240,true,'GroundLayer');
+
+		this.groundlayer.resizeWorld();
+
+		this.player = game.add.sprite(500,50,'slime');
+		this.player.anchor.setTo(0.5,0.5);
+		this.physics.arcade.enable(this.player);
+		this.player.body.gravity.y = 2000;
+		game.camera.follow(this.player);
+
+		this.cursors = game.input.keyboard.createCursorKeys();
+
+		this.step = 80;
+		this.speed = 800;
+	}
+	this.update = function(){
+		game.physics.arcade.collide(this.player,this.groundlayer);
+		
+		if (this.cursors.up.isDown && this.player.body.blocked.down) {
+			this.player.body.velocity.y = -1000;
+		}  		
+  		else if (this.cursors.down.isDown) {
+
+  		}
+  		else if (this.cursors.left.isDown) {
+  			this.move(this.speed,-1*this.step);
+  		}
+  		else if (this.cursors.right.isDown) {
+  			this.move(this.speed,this.step);
+  		}
+  		else
+  		{
+  			this.player.body.velocity.x += (-1*(this.player.body.velocity.x-0))/10;
+
+  		}
+	}
+	this.move = function(speed,step) {
+		if(!this.player.body.blocked.down)
+		{
+			step /= 5;
+			speed /= 5;
+		}
+		var dir = step > 0?1:-1;
+		if(dir*this.player.body.velocity.x <= speed)
+			this.player.body.velocity.x += step;
+		else
+			this.player.body.velocity.x = dir*speed;
+
+	}
+
 }
 
 
@@ -80,5 +148,6 @@ game.States.start_menu = function(){
 game.state.add('boot',game.States.boot);
 game.state.add('preload',game.States.preload);
 game.state.add('start_menu',game.States.start_menu);
+game.state.add('play',game.States.play)
 //從boot開始
 game.state.start('boot');
