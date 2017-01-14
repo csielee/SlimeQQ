@@ -98,7 +98,7 @@ game.States.play = function(){
 		this.player = game.add.sprite(500,50,'slime');
 		this.player.anchor.setTo(0.5,0.5);
 		this.physics.arcade.enable(this.player);
-		this.player.body.gravity.y = 2000;
+		//this.player.body.gravity.y = 2000;
 		game.camera.follow(this.player);
 
 		this.cursors = game.input.keyboard.createCursorKeys();
@@ -115,23 +115,27 @@ game.States.play = function(){
   		else if (this.cursors.down.isDown) {
 
   		}
-  		else if (this.cursors.left.isDown) {
+  		
+  		if (this.cursors.left.isDown) {
   			this.move(this.speed,-1*this.step);
   		}
-  		else if (this.cursors.right.isDown) {
+  		if (this.cursors.right.isDown) {
   			this.move(this.speed,this.step);
   		}
-  		else
+  		if(!this.cursors.right.isDown && !this.cursors.left.isDown)
   		{
   			this.player.body.velocity.x += (-1*(this.player.body.velocity.x-0))/10;
 
   		}
+
+  		if(this.player.body.velocity.y>0)
+  			this.player.body.velocity.y += (-1*(this.player.body.velocity.y-0))/10;
 	}
 	this.move = function(speed,step) {
 		if(!this.player.body.blocked.down)
 		{
-			step /= 5;
-			speed /= 5;
+			step /= 3;
+			//speed /= 5;
 		}
 		var dir = step > 0?1:-1;
 		if(dir*this.player.body.velocity.x <= speed)
