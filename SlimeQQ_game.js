@@ -48,6 +48,7 @@ game.States.preload = function(){
     	//game.load.image('slime',res_path + '/res/slime.png');
     	game.load.spritesheet('slime',res_path + '/img/sv_slime_sheet.png',64,64,54);
     	game.load.spritesheet('weapon',res_path + '/img/Weapons1+3.png',96,64,72);
+    	game.load.spritesheet('bullet',res_path + '/img/rgblaser.png', 4, 4);
     	//game.load.atlas();
     	/*
     	game.load.image('ground','assets/ground.png'); //地面
@@ -122,7 +123,7 @@ game.States.play = function(){
 		this.player.animations.add('move_left',[0,1,2,2,1,0],10,true);
 		this.player.animations.add('move_right',[6,7,8,8,7,6],10,true);
 		this.player.animations.add('attack',[12,13,14,12],6,false);
-		this.player.anchor.setTo(0.5,0.5);
+		this.player.anchor.setTo(0.5,0.6);
 		this.physics.arcade.enable(this.player);
 		this.player.body.collideWorldBounds = true;
 		this.player.body.setSize(50,40,7,24);
@@ -135,16 +136,30 @@ game.States.play = function(){
 		//生成武器
 
 		this.weapon = game.add.sprite(this.player.x,this.player.y,'weapon');
-		this.weapon.animations.add('gun_shut_left',[15,16,17],6,false);
-		this.weapon.animations.add('gun_shut_right',[57,58,59],6,false);
-		this.weapon.anchor.setTo(0.7,0.5);
+		//this.weapon.frame = 12;
+		this.weapon.animations.add('gun_shut_right',[14,13,12],9,false);
+		this.weapon.animations.add('gun_shut_left',[56,55,54],9,false);
+		this.weapon.anchor.setTo(0.2,0.5);
 		this.physics.arcade.enable(this.weapon);
 
 		this.player_group.add(this.weapon);
 		
-		this.weapon.frame = 17;
+		this.weapon.frame = 12;
+		//生成武器子彈
 
-		
+		this.bullet = game.add.weapon(40, 'bullet');
+		this.bullet.setBulletFrames(0, 80, true);
+		this.bullet.bulletKillType = Phaser.Weapon.KILL_DISTANCE;
+		this.bullet.bulletKillDistance = 500;
+		this.bullet.bulletSpeed = 1200;
+		//this.bullet.fireRate = 50;
+		this.bullet.trackSprite(this.weapon, 50, 0, true);
+		//this.bullet.trackedPointer = true;
+
+		//子彈發生頻率跟武器動畫
+		this.nextClick = this.time.now;
+		this.Clickstep = 500;
+		this.bullet.fireRate = this.Clickstep;
 
 		//控制
 		//game.input.onDown.add(this.attack,this);
@@ -172,57 +187,65 @@ game.States.play = function(){
 		//this.debug_show.style.backgroundColor = '#000';
 
 		//角色移動速度
-		this.step = 70;
-		this.speed = 700;
+		this.step = 2000;
+		this.speed = 1000;
 
-		//
-		this.nextClick = this.time.now;
-		this.Clickstep = 500;
+		//this.player.body.drag.set(800);
+    	this.player.body.maxVelocity.set(this.speed);
 
 	}
 	this.update = function(){
 		game.physics.arcade.collide(this.player,this.groundlayer);
+		game.physics.arcade.collide(this.bullet.bullets,this.groundlayer,this.bulletHitGround);
 
-		//this.player_group.setAll('body.velocity.x',this.player.body.velocity.x);
-		//this.player_group.setAll('body.velocity.y',this.player.body.velocity.y);
+		this.player_group.setAll('body.velocity.x',this.player.body.velocity.x);
+		this.player_group.setAll('body.velocity.y',this.player.body.velocity.y);
 		this.player_group.setAll('x',this.player.x);
 		this.player_group.setAll('y',this.player.y);
 
 		//武器跟著滑鼠
   		this.weapon.rotation = game.physics.arcade.angleToPointer(this.weapon);
-  		this.weapon.angle += 180;
+  		this.bullet.fireAngle = this.weapon.angle;
+
+  		//this.weapon.angle += 180;
+
   		if(Math.abs(this.weapon.angle)<=90)
-  			this.player_dir = 'left';
-  		else
   			this.player_dir = 'right';
+  		else
+  			this.player_dir = 'left';
 
 
 		var IsMove = 0;
 		
 		if (this.cursors.up.isDown || game.input.keyboard.isDown(Phaser.Keyboard.W)) {
-			this.player.body.velocity.y = this.move(this.player.body.velocity.y,this.speed,-1*this.step);
+			//this.player.body.velocity.y = this.move(this.player.body.velocity.y,this.speed,-1*this.step);
+			this.player.body.acceleration.y = -1*this.step;
 		}  		
   		else if (this.cursors.down.isDown || game.input.keyboard.isDown(Phaser.Keyboard.S)) {
- 			this.player.body.velocity.y = this.move(this.player.body.velocity.y,this.speed,this.step);
+ 			//this.player.body.velocity.y = this.move(this.player.body.velocity.y,this.speed,this.step);
+ 			this.player.body.acceleration.y = this.step;
   		}
   		else {
   			this.player.body.velocity.y += (-1*(this.player.body.velocity.y-0))/10;
+  			this.player.body.acceleration.y = 0;
   			//this.player.body.velocity.y = 0;
   			//this.player.body.velocity.y>0?this.player.body.velocity.y-=(this.step)*2:this.player.body.velocity.y+=(this.step)*2;
   			IsMove++;
   		}
   		
   		if (this.cursors.left.isDown || game.input.keyboard.isDown(Phaser.Keyboard.A)) {
-  			this.player.body.velocity.x = this.move(this.player.body.velocity.x,this.speed,-1*this.step);  			
+  			//this.player.body.velocity.x = this.move(this.player.body.velocity.x,this.speed,-1*this.step);  			
+  			this.player.body.acceleration.x = -1*this.step;
   			this.player.animations.play('move_'+this.player_dir);
   		}
   		else if (this.cursors.right.isDown || game.input.keyboard.isDown(Phaser.Keyboard.D)) {
-  			this.player.body.velocity.x = this.move(this.player.body.velocity.x,this.speed,this.step);
+  			//this.player.body.velocity.x = this.move(this.player.body.velocity.x,this.speed,this.step);
+  			this.player.body.acceleration.x = this.step;
   			this.player.animations.play('move_'+this.player_dir);
   		}
   		else {
   			this.player.body.velocity.x += (-1*(this.player.body.velocity.x-0))/10;
-  			//this.player.body.velocity.x = 0;
+  			this.player.body.acceleration.x = 0;
   			if(IsMove == 1) {
   				if(this.player.body.velocity.x<=20 && this.player.body.velocity.y<=20) {
   				this.player.animations.stop();
@@ -255,14 +278,15 @@ game.States.play = function(){
   				this.weapon.animations.play('gun_shut_'+this.player_dir);
   				this.nextClick = this.time.now + this.Clickstep;
   			}
+  			this.bullet.fire();
   		}
   		else
   		{
-  			if(this.player_dir == 'left') {
-  				this.weapon.frame = 17;
+  			if(this.player_dir == 'left' && this.weapon.frame<36) {
+  				this.weapon.frame += 42;
   			}
-  			else {
-  				this.weapon.frame = 59;
+  			else if(this.player_dir == 'right' && this.weapon.frame>35){
+  				this.weapon.frame -= 42;
   			}
   		}
 
@@ -299,11 +323,16 @@ game.States.play = function(){
 
   		//debug資訊顯示
   		this.debug_show.text = 'debug資訊\nx:' + this.player.body.x + '\ny:' + this.player.body.y;
+  		this.debug_show.text += '\nV :'+this.player.body.velocity + 'max V: ' + this.player.body.maxVelocity;
   		this.debug_show.text += '\nblood: '+this.blood_value + '/' + this.blood_max;
   		this.debug_show.text += '\npollution: '+this.pollution_value + '/' + this.pollution_max;
   		this.debug_show.text += '\nweapon f : '+this.weapon.frame;
   		this.debug_show.text += '\nweapon angle: '+this.weapon.angle+',weapon rotation: '+this.weapon.rotation;
 	}
+	this.render = function() {
+		//this.player.debug();
+	}
+
 	this.move = function(value,speed,step) {
 		var dir = step > 0?1:-1;
 		/*
@@ -321,6 +350,9 @@ game.States.play = function(){
 
 	this.attack = function() {
 		this.player.animations.play('attack');
+	}
+	this.bulletHitGround = function(bullet,ground) {
+		bullet.kill();
 	}
 
 }
