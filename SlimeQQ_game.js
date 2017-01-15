@@ -196,13 +196,6 @@ game.States.play = function(){
   		else
   			this.player_dir = 'right';
 
-  		if(this.player_dir == 'left') {
-  			this.weapon.frame = 17;
-  		}
-  		else {
-  			this.weapon.frame = 59;
-  		}
-
 
 		var IsMove = 0;
 		
@@ -261,6 +254,15 @@ game.States.play = function(){
   			{
   				this.weapon.animations.play('gun_shut_'+this.player_dir);
   				this.nextClick = this.time.now + this.Clickstep;
+  			}
+  		}
+  		else
+  		{
+  			if(this.player_dir == 'left') {
+  				this.weapon.frame = 17;
+  			}
+  			else {
+  				this.weapon.frame = 59;
   			}
   		}
 
