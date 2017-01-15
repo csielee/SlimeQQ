@@ -8,6 +8,7 @@ var game = new Phaser.Game( 1000 , 600 ,Phaser.AUTO,'game'); //產生game物件
 game.States = {}; //存放state對象
 
 var res_path = '.';
+var debug_div = document.getElementById("debug");
 
 //啟動遊戲
 game.States.boot = function(){
@@ -50,6 +51,10 @@ game.States.preload = function(){
     	game.load.spritesheet('weapon',res_path + '/img/Weapons1+3.png',96,64,72);
     	game.load.spritesheet('bullet',res_path + '/img/rgblaser.png', 4, 4);
     	//game.load.atlas();
+    	game.load.audio('gun_fire_audio',res_path + '/audio/gun_fire.mp3');
+    	game.load.audio('title_audio',res_path + '/audio/標題背景音樂.mp3');
+    	game.load.audio('game_audio',res_path + '/audio/弓箭手村東部背景音樂.mp3');
+
     	/*
     	game.load.image('ground','assets/ground.png'); //地面
     	game.load.image('title','assets/title.png'); //游???
@@ -76,6 +81,10 @@ game.States.preload = function(){
 //遊戲開始選單
 game.States.start_menu = function(){
 	this.create = function(){
+		var background_sound = game.add.audio('title_audio');
+		background_sound.play();
+		console.log('title sound play!\n');
+
 		game.add.tileSprite(0,0,game.width,game.height,'background'); //背景圖
 		//game.add.tileSprite(0,game.height-112,game.width,112,'ground').autoScroll(-100,0); //地板
 		var titleGroup = game.add.group(); //創建標題的群
@@ -88,11 +97,16 @@ game.States.start_menu = function(){
 		titleGroup.y = game.height/2 - titleGroup.height/4;
 		//titleGroup.anchor.setTo(0.5,0.5);
 		game.add.tween(titleGroup).to({ y:game.height/2-(titleGroup.height*3)/4 },3000,null,true,0,Number.MAX_VALUE,true); //標題的緩動動畫
+
+
 		var btn = game.add.button(game.width/2,game.height/2 + titleGroup.height,'gameStart_btn',function(){//?始按?
 			//alert('還沒寫好啦!');
+			background_sound.stop();
 			game.state.start('play');
 		});
 		btn.anchor.setTo(0.5,0.5);
+
+
 	}
 }
 
@@ -193,6 +207,11 @@ game.States.play = function(){
 		//this.player.body.drag.set(800);
     	this.player.body.maxVelocity.set(this.speed);
 
+    	//遊戲音效
+    	this.background_sound = game.add.audio('game_audio');
+    	this.background_sound.play();
+    	this.gun_fire_sound = game.add.audio('gun_fire_audio');
+
 	}
 	this.update = function(){
 		game.physics.arcade.collide(this.player,this.groundlayer);
@@ -276,6 +295,7 @@ game.States.play = function(){
   			if(this.nextClick <= this.time.now)
   			{
   				this.weapon.animations.play('gun_shut_'+this.player_dir);
+  				this.gun_fire_sound.play();
   				this.nextClick = this.time.now + this.Clickstep;
   			}
   			this.bullet.fire();
@@ -328,6 +348,10 @@ game.States.play = function(){
   		this.debug_show.text += '\npollution: '+this.pollution_value + '/' + this.pollution_max;
   		this.debug_show.text += '\nweapon f : '+this.weapon.frame;
   		this.debug_show.text += '\nweapon angle: '+this.weapon.angle+',weapon rotation: '+this.weapon.rotation;
+
+  		debug_div.textContent = this.debug_show.text;
+
+  		this.debug_show.text = '';
 	}
 	this.render = function() {
 		//this.player.debug();
