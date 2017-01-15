@@ -81,7 +81,7 @@ game.States.preload = function(){
 //遊戲開始選單
 game.States.start_menu = function(){
 	this.create = function(){
-		var background_sound = game.add.audio('title_audio');
+		var background_sound = game.add.audio('title_audio',1,true);
 		background_sound.play();
 		console.log('title sound play!\n');
 
@@ -165,7 +165,7 @@ game.States.play = function(){
 		this.bullet.setBulletFrames(0, 80, true);
 		this.bullet.bulletKillType = Phaser.Weapon.KILL_DISTANCE;
 		this.bullet.bulletKillDistance = 500;
-		this.bullet.bulletSpeed = 1200;
+		this.bullet.bulletSpeed = 1400;
 		//this.bullet.fireRate = 50;
 		this.bullet.trackSprite(this.weapon, 60, 0, true);
 		//this.bullet.trackedPointer = true;
@@ -202,13 +202,13 @@ game.States.play = function(){
 
 		//角色移動速度
 		this.step = 2000;
-		this.speed = 1000;
+		this.speed = 700;
 
 		//this.player.body.drag.set(800);
     	this.player.body.maxVelocity.set(this.speed);
 
     	//遊戲音效
-    	this.background_sound = game.add.audio('game_audio');
+    	this.background_sound = game.add.audio('game_audio',1,true);
     	this.background_sound.play();
     	this.gun_fire_sound = game.add.audio('gun_fire_audio');
 
