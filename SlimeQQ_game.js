@@ -47,7 +47,7 @@ game.States.preload = function(){
     	game.load.tilemap('map2',res_path + '/map/map2.json',null,Phaser.Tilemap.TILED_JSON);
     	//game.load.image('slime',res_path + '/res/slime.png');
     	game.load.spritesheet('slime',res_path + '/img/sv_slime_sheet.png',64,64,54);
-    	game.load.spritesheet('weapon',res_path + '/img/Weapons.png',96,64,36);
+    	game.load.spritesheet('weapon',res_path + '/img/Weapons1+3.png',96,64,72);
     	//game.load.atlas();
     	/*
     	game.load.image('ground','assets/ground.png'); //地面
@@ -125,6 +125,7 @@ game.States.play = function(){
 		this.player.anchor.setTo(0.5,0.5);
 		this.physics.arcade.enable(this.player);
 		this.player.body.collideWorldBounds = true;
+		this.player.body.setSize(50,40,7,24);
 		//this.player.body.gravity.y = 2000;
 		game.camera.follow(this.player);
 		this.player_dir = 'left';
@@ -134,7 +135,8 @@ game.States.play = function(){
 		//生成武器
 
 		this.weapon = game.add.sprite(this.player.x,this.player.y,'weapon');
-		this.weapon.animations.add('gun_shut',[15,16,17],6,false);
+		this.weapon.animations.add('gun_shut_left',[15,16,17],6,false);
+		this.weapon.animations.add('gun_shut_right',[57,58,59],6,false);
 		this.weapon.anchor.setTo(0.7,0.5);
 		this.physics.arcade.enable(this.weapon);
 
@@ -186,12 +188,28 @@ game.States.play = function(){
 		this.player_group.setAll('x',this.player.x);
 		this.player_group.setAll('y',this.player.y);
 
+		//武器跟著滑鼠
+  		this.weapon.rotation = game.physics.arcade.angleToPointer(this.weapon);
+  		this.weapon.angle += 180;
+  		if(Math.abs(this.weapon.angle)<=90)
+  			this.player_dir = 'left';
+  		else
+  			this.player_dir = 'right';
+
+  		if(this.player_dir == 'left') {
+  			this.weapon.frame = 17;
+  		}
+  		else {
+  			this.weapon.frame = 59;
+  		}
+
+
 		var IsMove = 0;
 		
-		if (this.cursors.up.isDown) {
+		if (this.cursors.up.isDown || game.input.keyboard.isDown(Phaser.Keyboard.W)) {
 			this.player.body.velocity.y = this.move(this.player.body.velocity.y,this.speed,-1*this.step);
 		}  		
-  		else if (this.cursors.down.isDown) {
+  		else if (this.cursors.down.isDown || game.input.keyboard.isDown(Phaser.Keyboard.S)) {
  			this.player.body.velocity.y = this.move(this.player.body.velocity.y,this.speed,this.step);
   		}
   		else {
@@ -201,15 +219,13 @@ game.States.play = function(){
   			IsMove++;
   		}
   		
-  		if (this.cursors.left.isDown) {
-  			this.player.body.velocity.x = this.move(this.player.body.velocity.x,this.speed,-1*this.step);
-  			this.player_dir = 'left';
-  			this.player.animations.play('move_left');
+  		if (this.cursors.left.isDown || game.input.keyboard.isDown(Phaser.Keyboard.A)) {
+  			this.player.body.velocity.x = this.move(this.player.body.velocity.x,this.speed,-1*this.step);  			
+  			this.player.animations.play('move_'+this.player_dir);
   		}
-  		else if (this.cursors.right.isDown) {
+  		else if (this.cursors.right.isDown || game.input.keyboard.isDown(Phaser.Keyboard.D)) {
   			this.player.body.velocity.x = this.move(this.player.body.velocity.x,this.speed,this.step);
-  			this.player_dir = 'right';
-  			this.player.animations.play('move_right');
+  			this.player.animations.play('move_'+this.player_dir);
   		}
   		else {
   			this.player.body.velocity.x += (-1*(this.player.body.velocity.x-0))/10;
@@ -243,13 +259,10 @@ game.States.play = function(){
   		{
   			if(this.nextClick <= this.time.now)
   			{
-  				this.weapon.animations.play('gun_shut');
+  				this.weapon.animations.play('gun_shut_'+this.player_dir);
   				this.nextClick = this.time.now + this.Clickstep;
   			}
   		}
-  		//武器跟著滑鼠
-  		this.weapon.rotation = game.physics.arcade.angleToPointer(this.weapon);
-  		this.weapon.angle += 180;
 
   		if(this.player.body.blocked.down)
   		{
