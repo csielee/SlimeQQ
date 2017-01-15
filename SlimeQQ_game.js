@@ -153,7 +153,7 @@ game.States.play = function(){
 		this.bullet.bulletKillDistance = 500;
 		this.bullet.bulletSpeed = 1200;
 		//this.bullet.fireRate = 50;
-		this.bullet.trackSprite(this.weapon, 50, 0, true);
+		this.bullet.trackSprite(this.weapon, 60, 0, true);
 		//this.bullet.trackedPointer = true;
 
 		//子彈發生頻率跟武器動畫
