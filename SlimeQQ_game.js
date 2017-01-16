@@ -5,6 +5,8 @@ game.States = {}; //存放state對象
 var res_path = '.';
 var debug_div = document.getElementById("debug");
 var self_name;
+var pollution_value;
+var gamewin = false;
 
 var database = firebase.database();
 
@@ -146,7 +148,8 @@ game.States.play = function(){
 
 		this.player_group = game.add.group();
 		//生成角色
-		this.player = createSlime(100,100);
+		//this.player = createSlime(100,100);
+		this.player = createSlime(Math.random()*game.world.width,Math.random()*game.world.height);
 		this.player.body.immovable = false;
 		//this.player.body.gravity.y = 2000;
 		game.camera.follow(this.player);
@@ -206,8 +209,8 @@ game.States.play = function(){
 		this.Healstep = 500;
 
 		//製作汙染條
-		this.pollution_max = 100;
-		this.pollution_value = 50;
+		this.pollution_max = 500;
+		pollution_value = 250;
 		this.pollution_show_width = 150;
 		this.pollution_show_height = 30;
 		this.pollution_show = game.add.graphics(game.camera.width-(this.pollution_show_width+20),20);
@@ -292,6 +295,12 @@ game.States.play = function(){
 					if(item.val().player_state == "dead") {
 						other[item.key].animations.stop();
 						other[item.key].frame = 52;
+						other[item.key].body.enable = false;
+					}
+					if(item.val().player_state == "win") {
+  						other[item.key].animations.stop();
+						other[item.key].frame = 27;
+						other[item.key].body.enable = false;					
 					}
 
 					//加入玩家碰撞群組
@@ -342,6 +351,12 @@ game.States.play = function(){
   				if(child.val().player_state == "dead") {
   					other[child.key].animations.stop();
 					other[child.key].frame = 52;
+					other[child.key].body.enable = false;
+				}
+				if(child.val().player_state == "win") {
+  					other[child.key].animations.stop();
+					other[child.key].frame = 27;
+					other[child.key].body.enable = false;					
 				}
 
 				//更新顏色
@@ -386,6 +401,18 @@ game.States.play = function(){
 				other_name[child.key].anchor.setTo(0.5,0);
 				game.physics.arcade.enable(other_name[child.key]);
 					other_name[child.key].y += 20;
+
+									//如果已經死亡
+				if(child.val().player_state == "dead") {
+					other[child.key].animations.stop();
+					other[child.key].frame = 52;
+					other[child.key].body.enable = false;
+				}
+				if(child.val().player_state == "win") {
+  					other[child.key].animations.stop();
+					other[child.key].frame = 27;
+					other[child.key].body.enable = false;					
+				}	
 
 				//加入玩家碰撞群組
 				players.add(other[child.key]);
@@ -434,7 +461,7 @@ game.States.play = function(){
 	this.update = function(){
 		game.physics.arcade.collide(players,this.groundlayer);
 		game.physics.arcade.collide(this.bullet.bullets,this.groundlayer,this.bulletHitGround);
-		game.physics.arcade.overlap(this.bullet.bullets,players,this.bulletHitGround);
+		game.physics.arcade.overlap(this.bullet.bullets,players,this.bulletHitOther);
 		game.physics.arcade.collide(players);
 		for(var key in other_bullet) {
 			if(other_bullet[key]!=null) {
@@ -525,6 +552,11 @@ game.States.play = function(){
   				this.weapon.animations.play('gun_shut_'+this.player_dir);
   				this.gun_fire_sound.play();
   				this.nextClick = this.time.now + this.Clickstep;
+
+  				pollution_value += 10;
+  				if(pollution_value > this.pollution_max)  					
+  					pollution_value = this.pollution_max;
+
   			}
   			
   		}
@@ -540,9 +572,6 @@ game.States.play = function(){
 
   		}
 
-  		if(this.player.body.blocked.down)
-  			this.pollution_value = (this.pollution_value + 1) % this.pollution_max;
-
   		//血條顯示
   		this.blood_show.clear();
   		if(this.blood_value > 0) {
@@ -555,9 +584,10 @@ game.States.play = function(){
 			if(!this.hasDead) {
 				this.hasDead = true;
 				this.player.frame = 52;
+				this.player.body.enable = false;
 				updateData['SlimeQQ/'+self_name+'/player_state'] = "dead";
 				firebase.database().ref().update(updateData);
-				var gameoverText = game.add.text(500,300,'你已經死亡\n按一下重新加入遊戲\n',{fontSize: '100px', fill: '#000', align: 'center'});
+				var gameoverText = game.add.text(500,300,'你已經死亡\n保護水資源不容易\n請多加油\n按一下重新加入遊戲\n',{fontSize: '100px', fill: '#000', align: 'center'});
 				gameoverText.fixedToCamera = true;
 				gameoverText.anchor.setTo(0.5,0.5);
 				//gameoverText.setTextBounds(500,300,1000,600);
@@ -578,23 +608,63 @@ game.States.play = function(){
 		//汙染條顯示
 		this.pollution_show.clear();
 		this.pollution_show.beginFill(0x2828FF);
-		var temp = (this.pollution_value*this.pollution_show_width)/this.pollution_max;
+		var temp = (pollution_value*this.pollution_show_width)/this.pollution_max;
 		this.pollution_show.drawRect(temp,0,this.pollution_show_width-temp,this.pollution_show_height);
 		this.pollution_show.beginFill(0xFF0000);
 		this.pollution_show.drawRect(0,0,temp,this.pollution_show_height);
 		this.pollution_show.endFill();
+		//汙染死亡
+		if(pollution_value >= this.pollution_max){
+			if(!this.hasDead) {
+				this.hasDead = true;
+				this.player.frame = 52;
+				this.player.body.enable = false;
+				updateData['SlimeQQ/'+self_name+'/player_state'] = "dead";
+				firebase.database().ref().update(updateData);
+				var gameoverText = game.add.text(500,300,'汙染過於嚴重\n史萊姆無法生存\n勿浪費水資源增加汙染\n按一下重新加入遊戲\n',{fontSize: '100px', fill: '#000', align: 'center'});
+				gameoverText.fixedToCamera = true;
+				gameoverText.anchor.setTo(0.5,0.5);
+				//gameoverText.setTextBounds(500,300,1000,600);
+				//點擊螢幕重新開始
+				game.input.onDown.addOnce(function() {
+					quitgame();
+					location.reload(); 
+					//game.state.start('start_menu');
+				}, this);
+			}
+		}
+		//清除汙染
+		if(pollution_value <= 0){
+			if(!this.hasDead) {
+				this.hasDead = true;
+				this.player.frame = 27;
+				this.player.body.enable = false;
+				updateData['SlimeQQ/'+self_name+'/player_state'] = "win";
+				firebase.database().ref().update(updateData);
+				var gameoverText = game.add.text(500,300,'感謝你\n史萊姆們可以使用\n乾淨的水資源了\n按一下可重新遊戲\n',{fontSize: '100px', fill: '#000', align: 'center'});
+				gameoverText.fixedToCamera = true;
+				gameoverText.anchor.setTo(0.5,0.5);
+				//gameoverText.setTextBounds(500,300,1000,600);
+				//點擊螢幕重新開始
+				game.input.onDown.addOnce(function() {
+					quitgame();
+					location.reload(); 
+					//game.state.start('start_menu');
+				}, this);
+			}
+		}
 
   		//debug資訊顯示
   		this.debug_show.text = 'debug資訊\nx:' + this.player.body.x + '\ny:' + this.player.body.y;
   		this.debug_show.text += '\nV :'+this.player.body.velocity + 'max V: ' + this.player.body.maxVelocity;
   		this.debug_show.text += '\nblood: '+this.blood_value + '/' + this.blood_max;
-  		this.debug_show.text += '\npollution: '+this.pollution_value + '/' + this.pollution_max;
+  		this.debug_show.text += '\npollution: '+pollution_value + '/' + this.pollution_max;
   		this.debug_show.text += '\nweapon f : '+this.weapon.frame;
   		this.debug_show.text += '\nweapon angle: '+this.weapon.angle+',weapon rotation: '+this.weapon.rotation;
   		this.debug_show.text += '\nplayer tine: '+this.player.tint;
   		this.debug_show.text += '\nWeapon shots: '+this.bullet.shots;
 
-  		debug_div.textContent = this.debug_show.text;
+  		//debug_div.textContent = this.debug_show.text;
 
   		this.debug_show.text = '';
 
@@ -643,6 +713,15 @@ game.States.play = function(){
 		bullet.kill();
 		this.blood_value -= 10;
 		this.nextHeal = game.time.now + 1000;
+	}
+	this.bulletHitOther = function(bullet,other) {
+		bullet.kill();
+		console.log("hit other");
+		pollution_value -= 20;
+		if(pollution_value < 0) {
+			pollution_value = 0;
+			gamewin = true;
+		}
 	}
 
 
