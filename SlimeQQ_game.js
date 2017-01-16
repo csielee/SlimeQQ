@@ -11,6 +11,20 @@ var res_path = '.';
 var debug_div = document.getElementById("debug");
 var self_name;
 
+var database = firebase.database();
+
+function quitgame() {
+	//alert("say 88");
+	firebase.database().ref('SlimeQQ/'+self_name).set(null);
+}
+
+//生成所有玩家的group
+var players;
+
+var other = {};
+var other_name = {};
+
+
 //啟動遊戲
 game.States.boot = function(){
 	this.preload = function(){
@@ -135,14 +149,8 @@ game.States.play = function(){
 
 		this.player_group = game.add.group();
 		//生成角色
-		this.player = game.add.sprite(100,100,'slime');
-		this.player.animations.add('move_left',[0,1,2,2,1,0],10,true);
-		this.player.animations.add('move_right',[6,7,8,8,7,6],10,true);
-		this.player.animations.add('attack',[12,13,14,12],6,false);
-		this.player.anchor.setTo(0.5,0.6);
-		this.physics.arcade.enable(this.player);
-		this.player.body.collideWorldBounds = true;
-		this.player.body.setSize(50,40,7,24);
+		this.player = createSlime(100,100);
+		this.player.body.immovable = false;
 		//this.player.body.gravity.y = 2000;
 		game.camera.follow(this.player);
 		this.player_dir = 'left';
@@ -222,10 +230,139 @@ game.States.play = function(){
     	this.background_sound.play();
     	this.gun_fire_sound = game.add.audio('gun_fire_audio');
 
+    	//上傳自己的資料到資料庫
+    	firebase.database().ref('SlimeQQ/'+self_name).set({
+        	"player_name": self_name,
+        	"player_dir": this.player_dir,
+        	"player_Ismove": 0,        
+        	"point": {
+          		"x": Math.floor(this.player.x),
+          		"y": Math.floor(this.player.y)
+        	}        
+      	});
+    	//生成所有玩家的group
+    	players = game.add.group();
+    	players.add(this.player);
+    	//讀取其它在線上的玩家資料
+    	firebase.database().ref('SlimeQQ').once('value',function(snapshot) {
+
+      		snapshot.forEach(function(item) {
+        		if(item.key != self_name && other[item.key]==null)
+        		{
+        			//生成角色
+					other[item.key] = createSlime(item.val().point.x,item.val().point.y);
+
+					if(item.val().player_Ismove == 1) {
+						other[item.key].animations.play('move_'+item.val().player_dir);
+					}
+					else {
+						if(item.val().player_dir == 'left')
+  							other[item.key].frame = 2;
+  						else
+  							other[item.key].frame = 6;
+					}
+
+					//生成角色名字
+					other_name[item.key] = game.add.text(other[item.key].x,other[item.key].y,item.val().player_name,{fontSize: '15px', fill: '#000'});
+					other_name[item.key].anchor.setTo(0.5,0);
+					game.physics.arcade.enable(other_name[item.key]);
+					other_name[item.key].y += 20;
+
+					//加入玩家碰撞群組
+					players.add(this.other[item.key]);
+        		}
+    		});
+
+
+  		});
+    	//同步其它玩家的資訊
+  		firebase.database().ref('SlimeQQ').on('child_changed',function(child) {
+  			if(child.key != self_name)
+  			{
+  				//更新位置
+  				other[child.key].x = child.val().point.x;
+  				other[child.key].y = child.val().point.y;
+  				other_name[child.key].x = other[child.key].x;
+  				other_name[child.key].y = other[child.key].y + 20;
+
+  				//更新方向
+  				if(child.val().player_Ismove == 1) {
+  					other[child.key].animations.play('move_'+child.val().player_dir);
+  				}
+  				else {
+  					other[child.key].animations.stop();
+  					if(child.val().player_dir == 'left')
+  						other[child.key].frame = 2;
+  					else
+  						other[child.key].frame = 6;
+  				}
+
+  			}
+  		});
+  		//有玩家加入遊戲
+  		firebase.database().ref('SlimeQQ').on('child_added',function(child) {
+  			if(child.key != self_name && other[child.key]==null)
+  			{
+  				        			//生成角色
+				other[child.key] = createSlime(child.val().point.x,child.val().point.y);
+
+				if(child.val().player_Ismove == 1) {
+						other[child.key].animations.play('move_'+child.val().player_dir);
+				}
+				else {
+					if(child.val().player_dir == 'left')
+  						other[child.key].frame = 2;
+  					else
+  						other[child.key].frame = 6;
+				}
+
+				//生成角色名字
+				other_name[child.key] = game.add.text(other[child.key].x,other[child.key].y,child.val().player_name,{fontSize: '15px', fill: '#000'});
+				other_name[child.key].anchor.setTo(0.5,0);
+				game.physics.arcade.enable(other_name[child.key]);
+					other_name[child.key].y += 20;
+
+				//加入玩家碰撞群組
+				players.add(this.other[child.key]);
+
+
+  			}
+  		});
+
+  		//有玩家離開遊戲
+  		firebase.database().ref('SlimeQQ').on('child_removed',function(child) {
+  			other[child.key].destroy();
+  			other[child.key] = null;
+  			other_name[child.key].destroy();
+  			other_name[child.key] = null;
+  		});
+
+  		game.onBlur.add(function() {
+  			console.log("no focus");
+  			//game.enableStep()
+  			game.paused = false;
+  		},this);
+
+
+  		game.gamePaused(function (){
+  			console.log("pasue");
+  		});
+  		game.gameResumed(function (){
+  			console.log("playing");
+  		});
+  		game.focusLoss(function (){
+  			console.log("no focus");
+  		});
+  		game.focusGain(function (){
+  			console.log("get focus");
+  		});
+
 	}
 	this.update = function(){
-		game.physics.arcade.collide(this.player,this.groundlayer);
+		game.physics.arcade.collide(players,this.groundlayer);
 		game.physics.arcade.collide(this.bullet.bullets,this.groundlayer,this.bulletHitGround);
+		game.physics.arcade.collide(players);
+
 
 		this.player_group.setAll('body.velocity.x',this.player.body.velocity.x);
 		this.player_group.setAll('body.velocity.y',this.player.body.velocity.y);
@@ -245,7 +382,7 @@ game.States.play = function(){
   			this.player_dir = 'left';
 
 
-		var IsMove = 0;
+		var IsMove = 1;
 		
 		if (this.cursors.up.isDown || game.input.keyboard.isDown(Phaser.Keyboard.W)) {
 			//this.player.body.velocity.y = this.move(this.player.body.velocity.y,this.speed,-1*this.step);
@@ -260,7 +397,7 @@ game.States.play = function(){
   			this.player.body.acceleration.y = 0;
   			//this.player.body.velocity.y = 0;
   			//this.player.body.velocity.y>0?this.player.body.velocity.y-=(this.step)*2:this.player.body.velocity.y+=(this.step)*2;
-  			IsMove++;
+  			IsMove--;
   		}
   		
   		if (this.cursors.left.isDown || game.input.keyboard.isDown(Phaser.Keyboard.A)) {
@@ -276,14 +413,17 @@ game.States.play = function(){
   		else {
   			this.player.body.velocity.x += (-1*(this.player.body.velocity.x-0))/10;
   			this.player.body.acceleration.x = 0;
-  			if(IsMove == 1) {
+  			if(IsMove == 0) {
   				if(this.player.body.velocity.x<=20 && this.player.body.velocity.y<=20) {
+
   				this.player.animations.stop();
   				if(this.player_dir == 'left')
   					this.player.frame = 2;
   				else
   					this.player.frame = 6;
   				}
+  				else
+  					IsMove = 1;
   			}
   			else {
   				this.player.animations.play('move_'+this.player_dir);
@@ -365,6 +505,20 @@ game.States.play = function(){
   		debug_div.textContent = this.debug_show.text;
 
   		this.debug_show.text = '';
+
+  		//更新在資料庫上的資料
+  		var updateData = {};
+  		updateData['SlimeQQ/'+self_name+'/player_dir'] = this.player_dir;
+  		updateData['SlimeQQ/'+self_name+'/point'] = { "x": Math.floor(this.player.x),"y": Math.floor(this.player.y)};   
+  		updateData['SlimeQQ/'+self_name+'/player_Ismove'] = IsMove;
+  		firebase.database().ref().update(updateData);
+
+
+  		this.player.bringToTop();
+    	this.weapon.bringToTop();
+    	this.player_name.bringToTop();
+    	//this.blood_show.bringToTop();
+    	//this.pollution_show.bringToTop();
 	}
 	this.render = function() {
 		//this.player.debug();
@@ -392,6 +546,8 @@ game.States.play = function(){
 		bullet.kill();
 	}
 
+
+
 }
 
 
@@ -402,3 +558,18 @@ game.state.add('start_menu',game.States.start_menu);
 game.state.add('play',game.States.play)
 //從boot開始
 game.state.start('boot');
+
+var createSlime = function(x,y) {
+	slime = game.add.sprite(x,y,'slime');
+
+    slime.animations.add('move_left',[0,1,2,2,1,0],10,true);
+	slime.animations.add('move_right',[6,7,8,8,7,6],10,true);
+
+	slime.anchor.setTo(0.5,0.6);
+	game.physics.arcade.enable(slime);
+	slime.body.collideWorldBounds = true;
+	slime.body.setSize(50,40,7,24);
+	slime.body.immovable = true;
+
+	return slime;
+}
