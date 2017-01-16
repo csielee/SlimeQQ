@@ -9,6 +9,7 @@ game.States = {}; //存放state對象
 
 var res_path = '.';
 var debug_div = document.getElementById("debug");
+var self_name;
 
 //啟動遊戲
 game.States.boot = function(){
@@ -81,7 +82,7 @@ game.States.preload = function(){
 //遊戲開始選單
 game.States.start_menu = function(){
 	this.create = function(){
-		var background_sound = game.add.audio('title_audio',1,true);
+		var background_sound = game.add.audio('title_audio',0.7,true);
 		background_sound.play();
 		console.log('title sound play!\n');
 
@@ -101,6 +102,7 @@ game.States.start_menu = function(){
 
 		var btn = game.add.button(game.width/2,game.height/2 + titleGroup.height,'gameStart_btn',function(){//?始按?
 			//alert('還沒寫好啦!');
+			self_name = prompt("輸入角色的暱稱","");
 			background_sound.stop();
 			game.state.start('play');
 		});
@@ -175,6 +177,14 @@ game.States.play = function(){
 		this.Clickstep = 500;
 		this.bullet.fireRate = this.Clickstep;
 
+		//生成角色名稱
+		this.player_name = game.add.text(this.player.x,this.player.y,self_name,{fontSize: '15px', fill: '#000'});
+		this.player_name.anchor.setTo(0.5,0);
+		this.physics.arcade.enable(this.player_name);
+		this.player_name.body.offset.y = 32;
+
+		this.player_group.add(this.player_name);
+
 		//控制
 		//game.input.onDown.add(this.attack,this);
 		this.cursors = game.input.keyboard.createCursorKeys();
@@ -208,7 +218,7 @@ game.States.play = function(){
     	this.player.body.maxVelocity.set(this.speed);
 
     	//遊戲音效
-    	this.background_sound = game.add.audio('game_audio',1,true);
+    	this.background_sound = game.add.audio('game_audio',0.7,true);
     	this.background_sound.play();
     	this.gun_fire_sound = game.add.audio('gun_fire_audio');
 
@@ -221,6 +231,7 @@ game.States.play = function(){
 		this.player_group.setAll('body.velocity.y',this.player.body.velocity.y);
 		this.player_group.setAll('x',this.player.x);
 		this.player_group.setAll('y',this.player.y);
+		this.player_name.y += 20;
 
 		//武器跟著滑鼠
   		this.weapon.rotation = game.physics.arcade.angleToPointer(this.weapon);
@@ -278,8 +289,9 @@ game.States.play = function(){
   				this.player.animations.play('move_'+this.player_dir);
   			}
   		}
-  		if(game.input.keyboard.isDown(Phaser.Keyboard.Z))
+  		if(game.input.keyboard.isDown(Phaser.Keyboard.SPACEBAR))
   		{
+  			this.player.tint = Math.random() * 0xffffff;
   			//this.weapon.frame = (this.weapon.frame+1) % 36;	
   		}
   		if(game.input.keyboard.isDown(Phaser.Keyboard.X))
@@ -348,6 +360,7 @@ game.States.play = function(){
   		this.debug_show.text += '\npollution: '+this.pollution_value + '/' + this.pollution_max;
   		this.debug_show.text += '\nweapon f : '+this.weapon.frame;
   		this.debug_show.text += '\nweapon angle: '+this.weapon.angle+',weapon rotation: '+this.weapon.rotation;
+  		this.debug_show.text += '\nplayer tine: '+this.player.tint;
 
   		debug_div.textContent = this.debug_show.text;
 

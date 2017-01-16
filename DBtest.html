@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+	<script src="https://www.gstatic.com/firebasejs/3.6.5/firebase.js"></script>
+	<script>
+  	// Initialize Firebase
+  	var config = {
+    	apiKey: "AIzaSyBuyYBVU2njsCHe4PkLD1RVtRChgnO1kLc",
+    	authDomain: "slimeqq-database.firebaseapp.com",
+    	databaseURL: "https://slimeqq-database.firebaseio.com",
+    	storageBucket: "slimeqq-database.appspot.com",
+    	messagingSenderId: "514777325203"
+  	};
+  firebase.initializeApp(config);
+
+
+	</script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.0.0/jquery.js"></script>
+  <style type="text/css">
+    #game {
+      position: absolute;
+      top: 0px;
+      left: 0px;
+      width: 100%;
+      height: auto;
+      text-align: middle;
+    }
+    #game canvas{
+      margin: auto auto;
+    }
+    #debug {
+      white-space:pre;
+      position: absolute;
+      top: 600px;
+      left: 200px;
+      width: 100%;
+      height: auto;
+      text-align: middle;
+    }
+    .showdiv {
+            white-space:pre;
+            text-align: center;
+                  width: 100%;
+      height: auto;
+    }
+  </style>
+</head>
+<body>
+  
+  <div>
+    Name:<input type="text" id="name"><br>
+    LV:<input type="text" id="lv"><br>
+    x:<input type="number" id="pointX">,y:<input type="number" id="pointY"><br>
+    <input type="button" id="send" value="新增"><input type="button" id="remove" value="移除">
+  </div>
+  <div class="showdiv" id="show"></div>
+  <div class="showdiv" id="show2"></div>
+  <div class="showdiv" id="show3"></div>
+  <div class="showdiv" id="show4"></div>
+  
+
+  <script type="text/javascript">
+    var database = firebase.database();
+
+    //$('#show4').text = '';
+    
+  firebase.database().ref('DBtest').on('value',function(snapshot) {
+    var str = 'show4\n';
+      snapshot.forEach(function(item) {
+        str += 'first name: '+ item.key +'\n,name:' +item.val().name +',lv: '+item.val().lv+',x:'+item.val().point.X+',y:'+item.val().point.Y+'\n';
+    });
+
+      $('#show4').text(str);
+  });
+
+  /*forEach(function(item) {
+    str += 'first name: '+ item.name() +'\n,name:' +item.val().name +',lv: '+item.val().lv+',x:'+item.val().point.X+',y:'+item.val().point.Y+'\n';
+  });*/
+  
+  
+
+    $("#send").click(function(){
+      var name = $('#name').val();
+      var lv = $('#lv').val();
+      var x = $('#pointX').val();
+      var y = $('#pointY').val();
+
+      firebase.database().ref('DBtest/'+name).set({
+        "name": name,        
+        "lv": lv,
+        "point": {
+          "X": x,
+          "Y": y
+        }        
+      });
+   });
+
+        $("#remove").click(function(){
+      var name = $('#name').val();
+
+      firebase.database().ref('DBtest/'+name).set(null);
+   });
+
+
+   firebase.database().ref('DBtest/').on('child_added',function(data) {
+    $('#show').text('show1\nname:'+data.val().name+',lv: '+data.val().lv+',x:'+data.val().point.X+',y:'+data.val().point.Y);
+   });
+
+  firebase.database().ref('DBtest/').on('child_changed',function(data) {
+    $('#show2').text('show2\nname:'+data.val().name+',lv: '+data.val().lv+',x:'+data.val().point.X+',y:'+data.val().point.Y);
+   });
+
+  firebase.database().ref('DBtest/').on('child_removed',function(data) {
+    $('#show3').text('show3\nname:'+data.val().name+',lv: '+data.val().lv+',x:'+data.val().point.X+',y:'+data.val().point.Y);
+   });
+
+  </script>
+</body>
+</html>
