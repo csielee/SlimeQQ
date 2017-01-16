@@ -69,23 +69,6 @@ game.States.preload = function(){
     	game.load.audio('title_audio',res_path + '/audio/標題背景音樂.mp3');
     	game.load.audio('game_audio',res_path + '/audio/弓箭手村東部背景音樂.mp3');
 
-    	/*
-    	game.load.image('ground','assets/ground.png'); //地面
-    	game.load.image('title','assets/title.png'); //游???
-    	game.load.spritesheet('bird','assets/bird.png',34,24,3); //?
-    	game.load.image('btn','assets/start-button.png');  //按?
-    	game.load.spritesheet('pipe','assets/pipes.png',54,320,2); //管道
-    	game.load.bitmapFont('flappy_font', 'assets/fonts/flappyfont/flappyfont.png', 'assets/fonts/flappyfont/flappyfont.fnt');
-    	game.load.audio('fly_sound', 'assets/flap.wav');//?翔的音效
-    	game.load.audio('score_sound', 'assets/score.wav');//得分的音效
-    	game.load.audio('hit_pipe_sound', 'assets/pipe-hit.wav'); //撞?管道的音效
-    	game.load.audio('hit_ground_sound', 'assets/ouch.wav'); //撞?地面的音效
-
-    	game.load.image('ready_text','assets/get-ready.png');
-    	game.load.image('play_tip','assets/instructions.png');
-    	game.load.image('game_over','assets/gameover.png');
-    	game.load.image('score_board','assets/scoreboard.png');
-    	*/
     	console.log('prelond finish!\n');
 	}
 	this.create = function(){
@@ -120,8 +103,6 @@ game.States.start_menu = function(){
 			game.state.start('play');
 		});
 		btn.anchor.setTo(0.5,0.5);
-
-
 	}
 }
 
@@ -130,8 +111,6 @@ game.States.play = function(){
 		game.physics.startSystem(Phaser.Physics.ARCADE);
 	}
 	this.create = function(){
-		
-
 		//game.map = game.add.tilemap('map1');
 		//game.map.addTilesetImage('ground1','map1_tile');
 		game.map = game.add.tilemap('map2');
@@ -151,37 +130,17 @@ game.States.play = function(){
 		//this.player = createSlime(100,100);
 		this.player = createSlime(Math.random()*game.world.width,Math.random()*game.world.height);
 		this.player.body.immovable = false;
-		//this.player.body.gravity.y = 2000;
 		game.camera.follow(this.player);
 		this.player_dir = 'left';
 
 		this.player_group.add(this.player);
-
 		//生成武器
-
-		/*this.weapon = game.add.sprite(this.player.x,this.player.y,'weapon');
-		this.weapon.frame = 12;
-		this.weapon.animations.add('gun_shut_right',[14,13,12],9,false);
-		this.weapon.animations.add('gun_shut_left',[56,55,54],9,false);
-		this.weapon.anchor.setTo(0.2,0.5);
-		this.physics.arcade.enable(this.weapon);*/
 		this.weapon = createWeapon(this.player.x,this.player.y);
 
-		this.player_group.add(this.weapon);
-		
-		
+		this.player_group.add(this.weapon);		
 		//生成武器子彈
-
-		/*this.bullet = game.add.weapon(40, 'bullet');
-		this.bullet.setBulletFrames(0, 80, true);
-		this.bullet.bulletKillType = Phaser.Weapon.KILL_DISTANCE;
-		this.bullet.bulletKillDistance = 500;
-		this.bullet.bulletSpeed = 1400;*/
 		this.bullet = createBullet();
-		//this.bullet.fireRate = 50;
 		this.bullet.trackSprite(this.weapon, 60, 0, true);
-		//this.bullet.trackedPointer = true;
-
 		//子彈發生頻率跟武器動畫
 		this.nextClick = this.time.now;
 		this.Clickstep = 500;
@@ -196,7 +155,6 @@ game.States.play = function(){
 		this.player_group.add(this.player_name);
 
 		//控制
-		//game.input.onDown.add(this.attack,this);
 		this.cursors = game.input.keyboard.createCursorKeys();
 
 		//製作血條
@@ -216,18 +174,14 @@ game.States.play = function(){
 		this.pollution_show = game.add.graphics(game.camera.width-(this.pollution_show_width+20),20);
 		this.pollution_show.fixedToCamera = true;
 
-
 		//debug資訊
 		this.debug_show = game.add.text(20, 20, 'debug_show', { fontSize: '15px', fill: '#fff' });
 		this.debug_show.fixedToCamera = true;
 		this.debug_show.style.fill = '#fff';
-		//this.debug_show.style.backgroundColor = '#000';
 
 		//角色移動速度
 		this.step = 2000;
 		this.speed = 700;
-
-		//this.player.body.drag.set(800);
     	this.player.body.maxVelocity.set(this.speed);
 
     	//遊戲音效
@@ -249,9 +203,11 @@ game.States.play = function(){
           		"y": Math.floor(this.player.y)
         	}        
       	});
+
     	//生成所有玩家的group
     	players = game.add.group();
     	players.add(this.player);
+
     	//讀取其它在線上的玩家資料
     	firebase.database().ref('SlimeQQ').once('value',function(snapshot) {
 
@@ -437,25 +393,6 @@ game.States.play = function(){
   				self_name = 0;
   		});
 
-  		game.onBlur.add(function() {
-  			console.log("no focus");
-  			game.disableStep()
-  			game.paused = false;
-  		},this);
-
-  		/*
-  		game.gamePaused(function (){
-  			console.log("pasue");
-  		});
-  		game.gameResumed(function (){
-  			console.log("playing");
-  		});
-  		game.focusLoss(function (){
-  			console.log("no focus");
-  		});
-  		game.focusGain(function (){
-  			console.log("get focus");
-  		});*/
 		this.hasDead = false;
 	}
 	this.update = function(){
@@ -727,7 +664,6 @@ game.States.play = function(){
 
 
 }
-
 
 //把state加入遊戲
 game.state.add('boot',game.States.boot);
