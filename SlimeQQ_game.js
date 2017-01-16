@@ -1,8 +1,3 @@
-var targetWidth = 500;
-var targetHeight = 400;
-
-
-
 var game = new Phaser.Game( 1000 , 600 ,Phaser.AUTO,'game'); //產生game物件
 //var game = new Phaser.Game( window.innerWidth , window.innerHeight ,Phaser.AUTO,'game'); //產生game物件
 game.States = {}; //存放state對象
@@ -14,7 +9,6 @@ var self_name;
 var database = firebase.database();
 
 function quitgame() {
-	//alert("say 88");
 	firebase.database().ref('SlimeQQ/'+self_name).set(null);
 }
 
@@ -23,6 +17,8 @@ var players;
 
 var other = {};
 var other_name = {};
+var other_weapon = {};
+var other_bullet = {};
 
 
 //啟動遊戲
@@ -64,7 +60,8 @@ game.States.preload = function(){
     	//game.load.image('slime',res_path + '/res/slime.png');
     	game.load.spritesheet('slime',res_path + '/img/sv_slime_sheet.png',64,64,54);
     	game.load.spritesheet('weapon',res_path + '/img/Weapons1+3.png',96,64,72);
-    	game.load.spritesheet('bullet',res_path + '/img/rgblaser.png', 4, 4);
+    	//game.load.spritesheet('bullet',res_path + '/img/rgblaser.png', 4, 4);
+    	game.load.spritesheet('bullet',res_path + '/img/bullet163.png', 14, 14);
     	//game.load.atlas();
     	game.load.audio('gun_fire_audio',res_path + '/audio/gun_fire.mp3');
     	game.load.audio('title_audio',res_path + '/audio/標題背景音樂.mp3');
@@ -159,23 +156,25 @@ game.States.play = function(){
 
 		//生成武器
 
-		this.weapon = game.add.sprite(this.player.x,this.player.y,'weapon');
-		//this.weapon.frame = 12;
+		/*this.weapon = game.add.sprite(this.player.x,this.player.y,'weapon');
+		this.weapon.frame = 12;
 		this.weapon.animations.add('gun_shut_right',[14,13,12],9,false);
 		this.weapon.animations.add('gun_shut_left',[56,55,54],9,false);
 		this.weapon.anchor.setTo(0.2,0.5);
-		this.physics.arcade.enable(this.weapon);
+		this.physics.arcade.enable(this.weapon);*/
+		this.weapon = createWeapon(this.player.x,this.player.y);
 
 		this.player_group.add(this.weapon);
 		
-		this.weapon.frame = 12;
+		
 		//生成武器子彈
 
-		this.bullet = game.add.weapon(40, 'bullet');
+		/*this.bullet = game.add.weapon(40, 'bullet');
 		this.bullet.setBulletFrames(0, 80, true);
 		this.bullet.bulletKillType = Phaser.Weapon.KILL_DISTANCE;
 		this.bullet.bulletKillDistance = 500;
-		this.bullet.bulletSpeed = 1400;
+		this.bullet.bulletSpeed = 1400;*/
+		this.bullet = createBullet();
 		//this.bullet.fireRate = 50;
 		this.bullet.trackSprite(this.weapon, 60, 0, true);
 		//this.bullet.trackedPointer = true;
@@ -202,6 +201,9 @@ game.States.play = function(){
 		this.blood_value = this.blood_max;
 		this.blood_show = game.add.graphics(0,game.camera.height-60);
 		this.blood_show.fixedToCamera = true;
+		//回血機制
+		this.nextHeal = this.time.now;
+		this.Healstep = 500;
 
 		//製作汙染條
 		this.pollution_max = 100;
@@ -234,7 +236,11 @@ game.States.play = function(){
     	firebase.database().ref('SlimeQQ/'+self_name).set({
         	"player_name": self_name,
         	"player_dir": this.player_dir,
-        	"player_Ismove": 0,        
+        	"player_Ismove": 0,
+        	"player_state": "live",
+        	"player_tint": this.player.tint,
+        	"weapon_angle": 0,
+        	"bullet_shots": this.bullet.shots,        
         	"point": {
           		"x": Math.floor(this.player.x),
           		"y": Math.floor(this.player.y)
@@ -251,6 +257,7 @@ game.States.play = function(){
         		{
         			//生成角色
 					other[item.key] = createSlime(item.val().point.x,item.val().point.y);
+					other[item.key].tint = item.val().player_tint;
 
 					if(item.val().player_Ismove == 1) {
 						other[item.key].animations.play('move_'+item.val().player_dir);
@@ -261,12 +268,31 @@ game.States.play = function(){
   						else
   							other[item.key].frame = 6;
 					}
+					//生成武器
+					other_weapon[item.key] = createWeapon(item.val().point.x,item.val().point.y);
+					other_weapon[item.key].angle = item.val().weapon_angle;
+
+					if(item.val().player_dir == 'left' && other_weapon[item.key].frame<36)
+  						other_weapon[item.key].frame += 42;
+  					else if(item.val().player_dir == 'right' && other_weapon[item.key].frame >35)
+  						other_weapon[item.key].frame -= 42;
+
+					//生成武器子彈
+					other_bullet[item.key] = createBullet();
+					other_bullet[item.key].trackSprite(other_weapon[item.key],60,0,true);
+					other_bullet[item.key].shots = item.val().bullet_shots;
 
 					//生成角色名字
 					other_name[item.key] = game.add.text(other[item.key].x,other[item.key].y,item.val().player_name,{fontSize: '15px', fill: '#000'});
 					other_name[item.key].anchor.setTo(0.5,0);
 					game.physics.arcade.enable(other_name[item.key]);
 					other_name[item.key].y += 20;
+
+					//如果已經死亡
+					if(item.val().player_state == "dead") {
+						other[item.key].animations.stop();
+						other[item.key].frame = 52;
+					}
 
 					//加入玩家碰撞群組
 					players.add(this.other[item.key]);
@@ -284,6 +310,8 @@ game.States.play = function(){
   				other[child.key].y = child.val().point.y;
   				other_name[child.key].x = other[child.key].x;
   				other_name[child.key].y = other[child.key].y + 20;
+  				other_weapon[child.key].x = other[child.key].x;
+  				other_weapon[child.key].y = other[child.key].y;
 
   				//更新方向
   				if(child.val().player_Ismove == 1) {
@@ -296,15 +324,37 @@ game.States.play = function(){
   					else
   						other[child.key].frame = 6;
   				}
+  				//更新武器方向
+  				other_weapon[child.key].angle = child.val().weapon_angle;
+  				if(child.val().player_dir == 'left' && other_weapon[child.key].frame<36)
+  					other_weapon[child.key].frame += 42;
+  				else if(child.val().player_dir == 'right' && other_weapon[child.key].frame >35)
+  					other_weapon[child.key].frame -= 42;
 
+  				//發射子彈
+  				if(other_bullet[child.key].shots != child.val().bullet_shots)
+  				{
+  					other_bullet[child.key].fire();
+  					other_weapon[child.key].animations.play('gun_shut_'+child.val().player_dir);
+  				}
+
+  				//更新存活狀態
+  				if(child.val().player_state == "dead") {
+  					other[child.key].animations.stop();
+					other[child.key].frame = 52;
+				}
+
+				//更新顏色
+				other[child.key].tint = child.val().player_tint;
   			}
   		});
   		//有玩家加入遊戲
   		firebase.database().ref('SlimeQQ').on('child_added',function(child) {
   			if(child.key != self_name && other[child.key]==null)
   			{
-  				        			//生成角色
+  				//生成角色
 				other[child.key] = createSlime(child.val().point.x,child.val().point.y);
+				other[child.key].tint = child.val().player_tint;
 
 				if(child.val().player_Ismove == 1) {
 						other[child.key].animations.play('move_'+child.val().player_dir);
@@ -316,6 +366,21 @@ game.States.play = function(){
   						other[child.key].frame = 6;
 				}
 
+				//生成武器
+				other_weapon[child.key] = createWeapon(child.val().point.x,child.val().point.y);
+				other_weapon[child.key].angle = child.val().weapon_angle;
+
+				if(child.val().player_dir == 'left' && other_weapon[child.key].frame<36)
+  					other_weapon[child.key].frame += 42;
+  				else if(child.val().player_dir == 'right' && other_weapon[child.key].frame >35)
+  					other_weapon[child.key].frame -= 42;
+
+				//生成武器子彈
+				other_bullet[child.key] = createBullet();
+				other_bullet[child.key].trackSprite(other_weapon[child.key],60,0,true);
+				other_bullet[child.key].shots = child.val().bullet_shots;
+
+
 				//生成角色名字
 				other_name[child.key] = game.add.text(other[child.key].x,other[child.key].y,child.val().player_name,{fontSize: '15px', fill: '#000'});
 				other_name[child.key].anchor.setTo(0.5,0);
@@ -323,7 +388,7 @@ game.States.play = function(){
 					other_name[child.key].y += 20;
 
 				//加入玩家碰撞群組
-				players.add(this.other[child.key]);
+				players.add(other[child.key]);
 
 
   			}
@@ -331,19 +396,27 @@ game.States.play = function(){
 
   		//有玩家離開遊戲
   		firebase.database().ref('SlimeQQ').on('child_removed',function(child) {
-  			other[child.key].destroy();
-  			other[child.key] = null;
-  			other_name[child.key].destroy();
-  			other_name[child.key] = null;
+  			if(child.key != self_name) {
+  				other[child.key].destroy();
+  				other[child.key] = null;
+  				other_name[child.key].destroy();
+  				other_name[child.key] = null;
+  				other_weapon[child.key].destroy();
+  				other_weapon[child.key] = null;
+  				other_bullet[child.key].destroy();
+  				other_bullet[child.key] = null;
+  			}
+  			else
+  				self_name = 0;
   		});
 
   		game.onBlur.add(function() {
   			console.log("no focus");
-  			//game.enableStep()
+  			game.disableStep()
   			game.paused = false;
   		},this);
 
-
+  		/*
   		game.gamePaused(function (){
   			console.log("pasue");
   		});
@@ -355,14 +428,21 @@ game.States.play = function(){
   		});
   		game.focusGain(function (){
   			console.log("get focus");
-  		});
-
+  		});*/
+		this.hasDead = false;
 	}
 	this.update = function(){
 		game.physics.arcade.collide(players,this.groundlayer);
 		game.physics.arcade.collide(this.bullet.bullets,this.groundlayer,this.bulletHitGround);
+		game.physics.arcade.overlap(this.bullet.bullets,players,this.bulletHitGround);
 		game.physics.arcade.collide(players);
-
+		for(var key in other_bullet) {
+			if(other_bullet[key]!=null) {
+				game.physics.arcade.collide(other_bullet[key].bullets,this.groundlayer,this.bulletHitGround);
+				game.physics.arcade.overlap(other_bullet[key].bullets,this.player,this.bulletHitSelf,null,this);
+			}
+		}
+		var updateData = {};
 
 		this.player_group.setAll('body.velocity.x',this.player.body.velocity.x);
 		this.player_group.setAll('body.velocity.y',this.player.body.velocity.y);
@@ -370,11 +450,13 @@ game.States.play = function(){
 		this.player_group.setAll('y',this.player.y);
 		this.player_name.y += 20;
 
+		//活著才能動
+		if(!this.hasDead) {
+
+
 		//武器跟著滑鼠
   		this.weapon.rotation = game.physics.arcade.angleToPointer(this.weapon);
   		this.bullet.fireAngle = this.weapon.angle;
-
-  		//this.weapon.angle += 180;
 
   		if(Math.abs(this.weapon.angle)<=90)
   			this.player_dir = 'right';
@@ -432,25 +514,19 @@ game.States.play = function(){
   		if(game.input.keyboard.isDown(Phaser.Keyboard.SPACEBAR))
   		{
   			this.player.tint = Math.random() * 0xffffff;
-  			//this.weapon.frame = (this.weapon.frame+1) % 36;	
+  			updateData['SlimeQQ/'+self_name+'/player_tint'] = this.player.tint;	
   		}
-  		if(game.input.keyboard.isDown(Phaser.Keyboard.X))
-  		{
-  			//this.weapon.frame = (this.weapon.frame+35) % 36;	
-  		}
-  		//武器跟著角色
-  		//this.weapon.body.velocity.x = this.player.body.velocity.x;
-  		//this.weapon.body.velocity.y = this.player.body.velocity.y;
   		//滑鼠按下
   		if(game.input.activePointer.isDown)
   		{
   			if(this.nextClick <= this.time.now)
   			{
+  				this.bullet.fire();
   				this.weapon.animations.play('gun_shut_'+this.player_dir);
   				this.gun_fire_sound.play();
   				this.nextClick = this.time.now + this.Clickstep;
   			}
-  			this.bullet.fire();
+  			
   		}
   		else
   		{
@@ -462,19 +538,10 @@ game.States.play = function(){
   			}
   		}
 
+  		}
+
   		if(this.player.body.blocked.down)
-  		{
   			this.pollution_value = (this.pollution_value + 1) % this.pollution_max;
-  			if(this.blood_value > 0)
-  				this.blood_value-=5;
-  		}
-  		else
-  		{
-  			if(this.blood_value < this.blood_max)
-  				this.blood_value+=5;
-  		}
-
-
 
   		//血條顯示
   		this.blood_show.clear();
@@ -482,6 +549,30 @@ game.States.play = function(){
   			this.blood_show.beginFill(0x0000C6,0.8);
 			this.blood_show.drawRoundedRect(0,0,game.camera.width*(this.blood_value/this.blood_max),40);
 			this.blood_show.endFill();
+		}
+		else {
+			//角色死亡
+			if(!this.hasDead) {
+				this.hasDead = true;
+				this.player.frame = 52;
+				updateData['SlimeQQ/'+self_name+'/player_state'] = "dead";
+				firebase.database().ref().update(updateData);
+				var gameoverText = game.add.text(500,300,'你已經死亡\n按一下重新加入遊戲\n',{fontSize: '100px', fill: '#000', align: 'center'});
+				gameoverText.fixedToCamera = true;
+				gameoverText.anchor.setTo(0.5,0.5);
+				//gameoverText.setTextBounds(500,300,1000,600);
+				//點擊螢幕重新開始
+				game.input.onDown.addOnce(function() {
+					quitgame();
+					location.reload(); 
+					//game.state.start('start_menu');
+				}, this);
+			}
+		}
+		//隨時間回血
+		if(this.blood_value < this.blood_max && this.nextHeal <= this.time.now) {
+			this.blood_value++;
+			this.nextHeal = this.time.now + this.Healstep;
 		}
 
 		//汙染條顯示
@@ -501,18 +592,21 @@ game.States.play = function(){
   		this.debug_show.text += '\nweapon f : '+this.weapon.frame;
   		this.debug_show.text += '\nweapon angle: '+this.weapon.angle+',weapon rotation: '+this.weapon.rotation;
   		this.debug_show.text += '\nplayer tine: '+this.player.tint;
+  		this.debug_show.text += '\nWeapon shots: '+this.bullet.shots;
 
   		debug_div.textContent = this.debug_show.text;
 
   		this.debug_show.text = '';
 
   		//更新在資料庫上的資料
-  		var updateData = {};
+  		if(!this.hasDead) {
   		updateData['SlimeQQ/'+self_name+'/player_dir'] = this.player_dir;
   		updateData['SlimeQQ/'+self_name+'/point'] = { "x": Math.floor(this.player.x),"y": Math.floor(this.player.y)};   
   		updateData['SlimeQQ/'+self_name+'/player_Ismove'] = IsMove;
+  		updateData['SlimeQQ/'+self_name+'/weapon_angle'] = this.weapon.angle;
+  		updateData['SlimeQQ/'+self_name+'/bullet_shots'] = this.bullet.shots;
   		firebase.database().ref().update(updateData);
-
+  		}
 
   		this.player.bringToTop();
     	this.weapon.bringToTop();
@@ -545,6 +639,11 @@ game.States.play = function(){
 	this.bulletHitGround = function(bullet,ground) {
 		bullet.kill();
 	}
+	this.bulletHitSelf = function(self,bullet) {
+		bullet.kill();
+		this.blood_value -= 10;
+		this.nextHeal = game.time.now + 1000;
+	}
 
 
 
@@ -560,7 +659,7 @@ game.state.add('play',game.States.play)
 game.state.start('boot');
 
 var createSlime = function(x,y) {
-	slime = game.add.sprite(x,y,'slime');
+	var slime = game.add.sprite(x,y,'slime');
 
     slime.animations.add('move_left',[0,1,2,2,1,0],10,true);
 	slime.animations.add('move_right',[6,7,8,8,7,6],10,true);
@@ -572,4 +671,27 @@ var createSlime = function(x,y) {
 	slime.body.immovable = true;
 
 	return slime;
+}
+
+var createWeapon = function(x,y) {
+	var weapon = game.add.sprite(x,y,'weapon');
+	weapon.frame = 12;
+	weapon.animations.add('gun_shut_right',[14,13,12],9,false);
+	weapon.animations.add('gun_shut_left',[56,55,54],9,false);
+	weapon.anchor.setTo(0.2,0.5);
+	game.physics.arcade.enable(weapon);
+
+	return weapon;
+}
+
+var createBullet = function() {
+	var bullet = game.add.weapon(40, 'bullet');
+	//bullet.setBulletFrames(0, 80, true);
+	bullet.bulletKillType = Phaser.Weapon.KILL_DISTANCE;
+	bullet.bulletKillDistance = 500;
+	bullet.bulletSpeed = 1400;
+	bullet.bulletInheritSpriteSpeed = true;
+	bullet.fireRate = 500;
+
+	return bullet;
 }
